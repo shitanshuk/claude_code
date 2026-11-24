@@ -1,0 +1,242 @@
+<title>Delhivery Tracker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+  /* Shipment tracking timeline — vertical journey view */
+  :root {
+    --bg: #FAFAFA; --surface: #FFFFFF; --fg: #1A1A2E; --fg-muted: #6B7084;
+    --accent: #E23744; --accent-soft: #FFF0F1; --track-line: #E0E2EA;
+    --success: #16A34A; --success-soft: #F0FDF4; --warning: #D97706; --warning-soft: #FFFBEB;
+    --border: #E8EAF0; --radius: 12px;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #0F1117; --surface: #1A1D2B; --fg: #E8EAF0; --fg-muted: #8B8FA4;
+    --accent: #FF4D5A; --accent-soft: #2A1520; --track-line: #2A2D3A;
+    --success: #4ADE80; --success-soft: #0A1F12; --warning: #FBBF24; --warning-soft: #1F1A0A;
+    --border: #2A2D3A; color-scheme: dark;
+  }}
+  :root[data-theme="dark"] {
+    --bg: #0F1117; --surface: #1A1D2B; --fg: #E8EAF0; --fg-muted: #8B8FA4;
+    --accent: #FF4D5A; --accent-soft: #2A1520; --track-line: #2A2D3A;
+    --success: #4ADE80; --success-soft: #0A1F12; --warning: #FBBF24; --warning-soft: #1F1A0A;
+    --border: #2A2D3A; color-scheme: dark;
+  }
+  body {
+    background: var(--bg); color: var(--fg);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 0;
+    max-width: 540px; margin: 0 auto;
+  }
+  h1, h2, h3 { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; }
+
+  .header { padding: 2rem 0 1.5rem; }
+  .header h1 { font-size: 1.5rem; font-weight: 700; text-wrap: balance; }
+  .awb-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 8px; padding: 6px 12px;
+    background: var(--accent-soft); color: var(--accent);
+    border-radius: 20px; font-size: 0.8rem; font-weight: 600;
+    font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
+  }
+  .awb-badge svg { flex-shrink: 0; }
+
+  .status-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.5rem;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .status-row { display: flex; justify-content: space-between; align-items: center; }
+  .status-label { font-size: 0.75rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
+  .status-value { font-weight: 600; font-size: 0.95rem; }
+  .status-pill {
+    display: inline-flex; padding: 4px 10px; border-radius: 20px;
+    font-size: 0.78rem; font-weight: 600;
+  }
+  .pill-transit { background: var(--warning-soft); color: var(--warning); }
+  .pill-delivered { background: var(--success-soft); color: var(--success); }
+
+  .progress-bar { height: 4px; background: var(--track-line); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.6s ease; }
+
+  .progress-labels {
+    display: flex; justify-content: space-between;
+    font-size: 0.7rem; color: var(--fg-muted); font-weight: 500;
+  }
+
+  .timeline { padding: 0 0 2rem; }
+  .timeline h2 { font-size: 1.1rem; margin-bottom: 1rem; }
+  .tl-item {
+    display: grid; grid-template-columns: auto 24px 1fr; gap: 0 12px;
+    min-height: 64px; position: relative;
+  }
+  .tl-time {
+    font-size: 0.72rem; color: var(--fg-muted); text-align: right;
+    padding-top: 2px; font-variant-numeric: tabular-nums; line-height: 1.4;
+    min-width: 52px;
+  }
+  .tl-track { display: flex; flex-direction: column; align-items: center; }
+  .tl-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--track-line); flex-shrink: 0; margin-top: 4px;
+    border: 2px solid var(--bg);
+    box-sizing: content-box;
+  }
+  .tl-dot.active { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .tl-dot.done { background: var(--success); }
+  .tl-line { width: 2px; flex: 1; background: var(--track-line); margin: 2px 0; }
+  .tl-item:last-child .tl-line { display: none; }
+  .tl-content { padding-bottom: 1.25rem; }
+  .tl-title { font-weight: 600; font-size: 0.88rem; line-height: 1.4; }
+  .tl-desc { font-size: 0.78rem; color: var(--fg-muted); margin-top: 2px; line-height: 1.5; }
+
+  .eta-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.5rem;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .eta-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--accent-soft); display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .eta-text h3 { font-size: 0.95rem; }
+  .eta-text p { font-size: 0.78rem; color: var(--fg-muted); margin: 2px 0 0; }
+
+  .notif-section { padding-bottom: 2rem; }
+  .notif-section h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
+  .notif-toggle {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem 1.25rem;
+    margin-bottom: 8px;
+  }
+  .notif-toggle span { font-size: 0.88rem; font-weight: 500; }
+  .toggle {
+    width: 44px; height: 24px; border-radius: 12px;
+    background: var(--track-line); position: relative;
+    cursor: pointer; transition: background 0.2s;
+    border: none; padding: 0;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: ''; position: absolute; width: 18px; height: 18px;
+    border-radius: 50%; background: white; top: 3px; left: 3px;
+    transition: transform 0.2s;
+  }
+  .toggle.on::after { transform: translateX(20px); }
+
+  @media (max-width: 420px) {
+    .tl-item { grid-template-columns: auto 20px 1fr; gap: 0 8px; }
+    .tl-time { min-width: 44px; font-size: 0.68rem; }
+  }
+</style>
+
+<div class="header">
+  <h1>Your Delhivery Shipment</h1>
+  <div class="awb-badge">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="22" height="18" rx="3"/><path d="M1 9h22"/></svg>
+    AWB 2827 7106 0405 23
+  </div>
+</div>
+
+<div class="status-card">
+  <div class="status-row">
+    <span class="status-label">Current Status</span>
+    <span class="status-pill pill-transit">In Transit</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width: 55%"></div></div>
+  <div class="progress-labels">
+    <span>Pickup</span>
+    <span>In Transit</span>
+    <span>Out for Delivery</span>
+    <span>Delivered</span>
+  </div>
+</div>
+
+<div class="eta-card">
+  <div class="eta-icon">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  </div>
+  <div class="eta-text">
+    <h3>Estimated Delivery</h3>
+    <p>Nov 26, 2026 by end of day</p>
+  </div>
+</div>
+
+<div class="timeline">
+  <h2>Tracking Updates</h2>
+
+  <div class="tl-item">
+    <div class="tl-time">Nov 24<br>3:42 PM</div>
+    <div class="tl-track"><div class="tl-dot active"></div><div class="tl-line"></div></div>
+    <div class="tl-content">
+      <div class="tl-title">In Transit — Gurgaon Hub</div>
+      <div class="tl-desc">Shipment arrived at Gurgaon sorting facility. Next stop: destination city hub.</div>
+    </div>
+  </div>
+
+  <div class="tl-item">
+    <div class="tl-time">Nov 24<br>10:15 AM</div>
+    <div class="tl-track"><div class="tl-dot done"></div><div class="tl-line"></div></div>
+    <div class="tl-content">
+      <div class="tl-title">Departed Origin Facility</div>
+      <div class="tl-desc">Package left the origin warehouse and is on the way to the regional hub.</div>
+    </div>
+  </div>
+
+  <div class="tl-item">
+    <div class="tl-time">Nov 24<br>8:30 AM</div>
+    <div class="tl-track"><div class="tl-dot done"></div><div class="tl-line"></div></div>
+    <div class="tl-content">
+      <div class="tl-title">Pickup Completed</div>
+      <div class="tl-desc">Shipment picked up from seller location in New Delhi.</div>
+    </div>
+  </div>
+
+  <div class="tl-item">
+    <div class="tl-time">Nov 23<br>6:12 PM</div>
+    <div class="tl-track"><div class="tl-dot done"></div><div class="tl-line"></div></div>
+    <div class="tl-content">
+      <div class="tl-title">Pickup Scheduled</div>
+      <div class="tl-desc">Delhivery pickup request created. Package ready for collection.</div>
+    </div>
+  </div>
+
+  <div class="tl-item">
+    <div class="tl-time">Nov 23<br>5:48 PM</div>
+    <div class="tl-track"><div class="tl-dot done"></div><div class="tl-line"></div></div>
+    <div class="tl-content">
+      <div class="tl-title">Order Placed</div>
+      <div class="tl-desc">Shipment manifest generated and AWB assigned.</div>
+    </div>
+  </div>
+</div>
+
+<div class="notif-section">
+  <h2>Notifications</h2>
+  <div class="notif-toggle">
+    <span>Every status change</span>
+    <button class="toggle on" onclick="this.classList.toggle('on')" aria-label="Toggle status notifications"></button>
+  </div>
+  <div class="notif-toggle">
+    <span>Out for delivery alert</span>
+    <button class="toggle on" onclick="this.classList.toggle('on')" aria-label="Toggle delivery alert"></button>
+  </div>
+  <div class="notif-toggle">
+    <span>Delivery completed</span>
+    <button class="toggle on" onclick="this.classList.toggle('on')" aria-label="Toggle delivery completed notification"></button>
+  </div>
+</div>
+
+<script>
+  // Simulated live-update pulse on the active dot
+  const activeDot = document.querySelector('.tl-dot.active');
+  if (activeDot) {
+    activeDot.style.animation = 'pulse 2s ease-in-out infinite';
+    const style = document.createElement('style');
+    style.textContent = `@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 3px var(--accent-soft); } 50% { box-shadow: 0 0 0 6px var(--accent-soft); } }`;
+    document.head.appendChild(style);
+  }
+</script>
